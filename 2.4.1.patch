@@ -1,0 +1,185 @@
+Index: configure.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- configure.py	(revision 85c8b2a817f95a3e979ecd1ed95bff1dc1335cff)
++++ configure.py	(revision 9933337e20577623da2d7b8d88c80e3e4fc99f0d)
+@@ -531,7 +531,7 @@
+     # maximum performance should compile TF in their environment and can pass
+     # `-march=native` there.
+     # See https://github.com/tensorflow/tensorflow/issues/45744 and duplicates
+-    default_cc_opt_flags = '-Wno-sign-compare'
++    default_cc_opt_flags = '-march=native -Wno-sign-compare'
+   question = ('Please specify optimization flags to use during compilation when'
+               ' bazel option "--config=opt" is specified [Default is %s]: '
+              ) % default_cc_opt_flags
+@@ -540,6 +540,7 @@
+   for opt in cc_opt_flags.split():
+     write_to_bazelrc('build:opt --copt=%s' % opt)
+     write_to_bazelrc('build:opt --host_copt=%s' % opt)
++  write_to_bazelrc('build:opt --host_copt=-march=native')
+   write_to_bazelrc('build:opt --define with_default_optimizations=true')
+ 
+ 
+Index: tensorflow/core/util/gpu_device_functions.h
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- tensorflow/core/util/gpu_device_functions.h	(revision 85c8b2a817f95a3e979ecd1ed95bff1dc1335cff)
++++ tensorflow/core/util/gpu_device_functions.h	(revision 9933337e20577623da2d7b8d88c80e3e4fc99f0d)
+@@ -197,8 +197,8 @@
+   unsigned int lane_id;
+ #if GOOGLE_CUDA
+ #if __clang__
+-  return __nvvm_read_ptx_sreg_laneid();
+-#else   // __clang__
++//  return __nvvm_read_ptx_sreg_laneid();
++//#else   // __clang__
+   asm("mov.u32 %0, %%laneid;" : "=r"(lane_id));
+ #endif  // __clang__
+ #elif TENSORFLOW_USE_ROCM
+Index: tensorflow/core/util/gpu_kernel_helper.h
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- tensorflow/core/util/gpu_kernel_helper.h	(revision 85c8b2a817f95a3e979ecd1ed95bff1dc1335cff)
++++ tensorflow/core/util/gpu_kernel_helper.h	(revision 9933337e20577623da2d7b8d88c80e3e4fc99f0d)
+@@ -57,7 +57,8 @@
+ #if GOOGLE_CUDA
+ 
+ #define GPU_DYNAMIC_SHARED_MEM_DECL(ALIGN, TYPE, NAME) \
+-  extern __shared__ __align__(ALIGN) TYPE NAME[]
++    extern __shared__ TYPE NAME[]
++//  extern __shared__ __align__(ALIGN) TYPE NAME[]
+ 
+ #elif TENSORFLOW_USE_ROCM
+ 
+Index: tensorflow/stream_executor/cuda/cuda_gpu_executor.cc
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- tensorflow/stream_executor/cuda/cuda_gpu_executor.cc	(revision 85c8b2a817f95a3e979ecd1ed95bff1dc1335cff)
++++ tensorflow/stream_executor/cuda/cuda_gpu_executor.cc	(revision 9933337e20577623da2d7b8d88c80e3e4fc99f0d)
+@@ -195,7 +195,7 @@
+   _NSGetExecutablePath(nullptr, &buffer_size);
+   char unresolved_path[buffer_size];
+   _NSGetExecutablePath(unresolved_path, &buffer_size);
+-  CHECK_ERR(realpath(unresolved_path, exe_path) ? 1 : -1);
++//  CHECK_ERR(realpath(unresolved_path, exe_path) ? 1 : -1);
+ #else
+ #if defined(PLATFORM_WINDOWS)
+   HMODULE hModule = GetModuleHandle(NULL);
+Index: third_party/gpus/crosstool/cc_toolchain_config.bzl.tpl
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- third_party/gpus/crosstool/cc_toolchain_config.bzl.tpl	(revision 85c8b2a817f95a3e979ecd1ed95bff1dc1335cff)
++++ third_party/gpus/crosstool/cc_toolchain_config.bzl.tpl	(revision 9933337e20577623da2d7b8d88c80e3e4fc99f0d)
+@@ -457,7 +457,7 @@
+                                 expand_if_available = "linker_param_file",
+                                 flags = ["@%{linker_param_file}"],
+                             ),
+-                            flag_group(flags = ["rcsD"]),
++                            flag_group(flags = ["-o"]),
+                             flag_group(
+                                 flags = ["%{output_execpath}"],
+                                 expand_if_available = "output_execpath",
+Index: third_party/gpus/crosstool/clang/bin/crosstool_wrapper_driver_is_not_gcc.tpl
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- third_party/gpus/crosstool/clang/bin/crosstool_wrapper_driver_is_not_gcc.tpl	(revision 85c8b2a817f95a3e979ecd1ed95bff1dc1335cff)
++++ third_party/gpus/crosstool/clang/bin/crosstool_wrapper_driver_is_not_gcc.tpl	(revision 9933337e20577623da2d7b8d88c80e3e4fc99f0d)
+@@ -95,7 +95,7 @@
+   parser.add_argument('-iquote', nargs='*', action='append')
+   parser.add_argument('--sysroot', nargs=1)
+   parser.add_argument('-g', nargs='*', action='append')
+-  parser.add_argument('-fno-canonical-system-headers', action='store_true')
++  #parser.add_argument('-fno-canonical-system-headers', action='store_true')
+   parser.add_argument('-no-canonical-prefixes', action='store_true')
+ 
+   args, _ = parser.parse_known_args(argv)
+@@ -108,8 +108,8 @@
+     opts += ' -iquote ' + ' -iquote '.join(sum(args.iquote, []))
+   if args.g:
+     opts += ' -g' + ' -g'.join(sum(args.g, []))
+-  if args.fno_canonical_system_headers:
+-    opts += ' -fno-canonical-system-headers'
++  #if args.fno_canonical_system_headers:
++  #  opts += ' -fno-canonical-system-headers'
+   if args.no_canonical_prefixes:
+     opts += ' -no-canonical-prefixes'
+   if args.sysroot:
+Index: third_party/gpus/cuda_configure.bzl
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- third_party/gpus/cuda_configure.bzl	(revision 85c8b2a817f95a3e979ecd1ed95bff1dc1335cff)
++++ third_party/gpus/cuda_configure.bzl	(revision 9933337e20577623da2d7b8d88c80e3e4fc99f0d)
+@@ -484,7 +484,7 @@
+         _should_check_soname(version, static),
+     )
+ 
+-def _check_cuda_libs(repository_ctx, script_path, libs):
++def _check_cuda_libs_failed(repository_ctx, script_path, libs):
+     python_bin = get_python_bin(repository_ctx)
+     contents = repository_ctx.read(script_path).splitlines()
+ 
+@@ -505,6 +505,32 @@
+     if all_paths != checked_paths:
+         auto_configure_fail("Error with installed CUDA libs. Expected '%s'. Actual '%s'." % (all_paths, checked_paths))
+ 
++def _check_cuda_libs(repository_ctx, script_path, paths, check_soname = True):
++    """
++      Finds a library among a list of potential paths.
++      Args:
++        paths: List of paths to inspect.
++      Returns:
++        Returns the first path in paths that exist.
++    """
++    objdump = repository_ctx.which("objdump")
++    mismatches = []
++    for path in paths:
++        path = path[0]
++        #if not path.exists:
++        #    continue
++        output = repository_ctx.execute([objdump, "-p", str(path)]).stdout
++        output = [line for line in output.splitlines() if "name @rpath/" in line]
++        sonames = [line.strip().split("/")[-1] for line in output]
++        sonames = [sonames[0].strip().split(" ")[0] for line in output]
++        return path
++
++    if mismatches:
++        auto_configure_fail(
++            "None of the libraries match their SONAME: " + ", ".join(mismatches),
++        )
++    auto_configure_fail("No library found under: " + ", ".join(paths))
++
+ def _find_libs(repository_ctx, check_cuda_libs_script, cuda_config):
+     """Returns the CUDA and cuDNN libraries on the system.
+ 
+@@ -914,7 +940,7 @@
+     outs = [
+ %s
+     ],
+-    cmd = \"""cp -rLf "%s/." "%s/" %s\""",
++    cmd = \"""cp -r -f "%s/." "%s/" %s\""",
+ )""" % (name, "\n".join(outs), src_dir, out_dir, post_cmd)
+ 
+ def _flag_enabled(repository_ctx, flag_name):
+@@ -1252,7 +1278,7 @@
+         # .d file - given that includes that are prefixed with "../" multiple
+         # time quickly grow longer than the root of the tree, this can lead to
+         # bazel's header check failing.
+-        cuda_defines["%{extra_no_canonical_prefixes_flags}"] = "\"-fno-canonical-system-headers\""
++        #cuda_defines["%{extra_no_canonical_prefixes_flags}"] = "\"-fno-canonical-system-headers\""
+ 
+         file_ext = ".exe" if is_windows(repository_ctx) else ""
+         nvcc_path = "%s/nvcc%s" % (cuda_config.config["cuda_binary_dir"], file_ext)
